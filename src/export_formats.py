@@ -1,7 +1,7 @@
 import json
 import csv
 import io
-from typing import Dict, List
+from typing import Dict
 
 def generate_json(result: Dict) -> bytes:
     """Return a JSON representation of the analysis as UTF‑8 bytes."""

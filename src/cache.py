@@ -3,11 +3,14 @@ import os
 import hashlib
 from typing import Optional, Dict
 
+
 CACHE_DIR = os.path.join(os.path.dirname(__file__), "..", "cache")
 os.makedirs(CACHE_DIR, exist_ok=True)
 
+
 def _cache_path(key: str) -> str:
     return os.path.join(CACHE_DIR, f"{key}.json")
+
 
 def make_key(text: str, language: str) -> str:
     """Create a stable hash key from the report text and language."""
@@ -16,6 +19,7 @@ def make_key(text: str, language: str) -> str:
     h.update(language.encode("utf-8"))
     return h.hexdigest()
 
+
 def get_cached_result(key: str) -> Optional[Dict]:
     """Return cached result dict if present, else None."""
     path = _cache_path(key)
@@ -23,6 +27,7 @@ def get_cached_result(key: str) -> Optional[Dict]:
         with open(path, "r", encoding="utf-8") as f:
             return json.load(f)
     return None
+
 
 def set_cached_result(key: str, result: Dict) -> None:
     """Store result dict in cache."""
