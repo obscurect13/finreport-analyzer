@@ -9,7 +9,9 @@ DUMMY_RESULT = {
     "resume": "Summary",
     "ton": "neutre",
     "raison_ton": "Neutral tone",
-    "kpis": [{"nom": "Revenue", "valeur": "$10B", "variation": "+5%", "sens": "pos"}],
+    "kpis": [
+        {"nom": "Revenue", "valeur": "$10B", "variation": "+5%", "sens": "pos"}
+    ],
     "themes": ["Growth"],
     "risques": ["Risk A"],
     "opportunites": ["Opportunity A"],
@@ -19,9 +21,23 @@ DUMMY_RESULT = {
 def _make_dummy_pdf() -> bytes:
     from reportlab.pdfgen import canvas
     import io
+
     buf = io.BytesIO()
     c = canvas.Canvas(buf)
-    c.drawString(100, 750, "A " * 150)
+    lines = [
+        "Annual Financial Report 2024 - Test Corporation",
+        "Revenue: $4.2 Billion (+12% YoY)",
+        "Net Income: $820 Million (+9% YoY)",
+        "EBITDA: $1.1 Billion (+14% YoY)",
+        "Operating Margin: 19.5% (+1.2pp YoY)",
+        "Free Cash Flow: $640 Million (+18% YoY)",
+        "Strong performance across all business segments.",
+        "Digital transformation and cloud migration ongoing.",
+    ]
+    y = 750
+    for line in lines:
+        c.drawString(100, y, line)
+        y -= 20
     c.showPage()
     c.save()
     return buf.getvalue()
@@ -42,9 +58,18 @@ def test_compare_endpoint(mock_anthropic, tmp_path, monkeypatch):
 
     # Return different results for each call
     result_a = {**DUMMY_RESULT, "resume": "Report A summary"}
-    result_b = {**DUMMY_RESULT, "resume": "Report B summary", "kpis": [
-        {"nom": "Revenue", "valeur": "$12B", "variation": "+8%", "sens": "pos"}
-    ]}
+    result_b = {
+        **DUMMY_RESULT,
+        "resume": "Report B summary",
+        "kpis": [
+            {
+                "nom": "Revenue",
+                "valeur": "$12B",
+                "variation": "+8%",
+                "sens": "pos",
+            }
+        ],
+    }
 
     mock_anthropic.return_value.messages.stream.side_effect = [
         _make_stream_mock(result_a),

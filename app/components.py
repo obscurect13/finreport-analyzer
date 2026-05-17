@@ -1,9 +1,18 @@
 import streamlit as st
 
 
+def _safe_text(text: str) -> str:
+    """Escape characters that Streamlit/markdown treats as special,
+    in particular $ signs which trigger LaTeX math rendering."""
+    return text.replace("$", r"\$")
+
+
 def header():
     st.title("📊 FinReport Analyser")
-    st.caption("Upload an annual report — get instant executive insights, KPIs & sentiment.")
+    st.caption(
+        "Upload an annual report — get instant executive"
+        + "insights, KPIs & sentiment."
+    )
     st.divider()
 
 
@@ -22,16 +31,16 @@ def info_sidebar():
 
 def summary_section(resume: str):
     st.subheader("Executive Summary")
-    st.info(resume)
+    st.info(_safe_text(resume))
 
 
 def tone_section(ton: str, raison: str):
     st.subheader("Overall Tone")
 
     tone_map = {
-        "optimiste":  ("🟢", "Optimistic",  "success"),
-        "neutre":     ("🟡", "Neutral",      "warning"),
-        "pessimiste": ("🔴", "Pessimistic",  "error"),
+        "optimiste": ("🟢", "Optimistic", "success"),
+        "neutre": ("🟡", "Neutral", "warning"),
+        "pessimiste": ("🔴", "Pessimistic", "error"),
     }
     icon, label, kind = tone_map.get(ton.lower(), ("🟡", "Neutral", "warning"))
 
@@ -40,11 +49,11 @@ def tone_section(ton: str, raison: str):
         st.metric(label="Sentiment", value=f"{icon} {label}")
     with col2:
         if kind == "success":
-            st.success(raison)
+            st.success(_safe_text(raison))
         elif kind == "error":
-            st.error(raison)
+            st.error(_safe_text(raison))
         else:
-            st.warning(raison)
+            st.warning(_safe_text(raison))
 
 
 def kpis_section(kpis: list):
@@ -59,7 +68,9 @@ def kpis_section(kpis: list):
                 label=kpi.get("nom", ""),
                 value=kpi.get("valeur", "—"),
                 delta=delta,
-                delta_color="normal" if kpi.get("sens") != "neg" else "inverse",
+                delta_color="normal"
+                if kpi.get("sens") != "neg"
+                else "inverse",
             )
 
 
@@ -67,7 +78,7 @@ def themes_section(themes: list):
     with st.expander("🗂 Strategic Themes", expanded=True):
         cols = st.columns(2)
         for i, theme in enumerate(themes):
-            cols[i % 2].markdown(f"- {theme}")
+            cols[i % 2].markdown(f"- {_safe_text(theme)}")
 
 
 def risks_opportunities_section(risques: list, opportunites: list):
@@ -75,16 +86,17 @@ def risks_opportunities_section(risques: list, opportunites: list):
     with col_risk:
         with st.expander("⚠️ Identified Risks", expanded=True):
             for r in risques:
-                st.error(r, icon="⚠️")
+                st.error(_safe_text(r), icon="⚠️")
     with col_opp:
         with st.expander("✅ Opportunities", expanded=True):
             for o in opportunites:
-                st.success(o, icon="✅")
+                st.success(_safe_text(o), icon="✅")
 
 
 def export_section(result: dict, filename: str):
     # PDF export (existing)
     from src.exporter import generate_pdf
+
     pdf_bytes = generate_pdf(result, filename)
     # CSV/JSON export helpers
     from src.export_formats import generate_csv, generate_json

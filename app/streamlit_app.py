@@ -1,33 +1,43 @@
-import sys
 import os
-
-# ── Ensure project root is on path ──────────────────────────────────────────
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
-# ── Validate environment variables before anything else ─────────────────────
-from src.config import validate_env
-validate_env()
-
-# ── Streamlit imports ────────────────────────────────────────────────────────
+import sys
 import streamlit as st
-from src.extractor import extract_text_from_pdf
-from src.analyzer import analyze_report
-from app import components as c
+import requests
+# Ensure project root is on path before any local imports
+sys.path.insert(
+    0, os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+)
+# Import project modules after adjusting sys.path
+from app import components as c  # noqa: E402
+from app._pages.compare import render as render_compare  # noqa: E402
 
-# ── Page config ──────────────────────────────────────────────────────────────
+# Page configuration
 st.set_page_config(
     page_title="Report Reader",
     page_icon="📊",
     layout="wide",
 )
 
+# Verify environment via FastAPI
+api_base = os.getenv("API_BASE_URL", "http://localhost:8000")
+try:
+    resp = requests.get(f"{api_base}/api/validate_env", timeout=5)
+    resp.raise_for_status()
+    env_status = resp.json()
+    if env_status.get("status") != "ok":
+        st.error(
+            "⚠️ Environment validation failed: "
+            + env_status.get("detail", "")
+        )
+except Exception as e:
+    st.error(f"⚠️ Could not reach the API: {e}")
+
 c.header()
 c.info_sidebar()
 
-# ── Tabs ─────────────────────────────────────────────────────────────────────
+# Tabs
 tab_analyse, tab_compare = st.tabs(["📊 Analyse", "📋 Compare"])
 
-# ── Analyse tab ──────────────────────────────────────────────────────────────
+# Analyse tab
 with tab_analyse:
     uploaded_file = st.file_uploader(
         "Upload your financial report (PDF)",
@@ -39,45 +49,49 @@ with tab_analyse:
         "Language",
         options=["fr", "en", "es"],
         index=1,
-        format_func=lambda x: {"fr": "Français", "en": "English", "es": "Español"}[x],
+        format_func=lambda x: {
+            "fr": "Français",
+            "en": "English",
+            "es": "Español",
+        }[x],
         key="home_lang",
     )
 
     if uploaded_file:
         if st.button("Analyse Report", type="primary"):
-            # ── Step 1: extract PDF ──
-            with st.status("Reading PDF…", expanded=True) as status:
+            headers = {}
+            api_key = os.getenv("API_KEY")
+            if api_key:
+                headers["X-API-Key"] = api_key
+
+            with st.status("Analysing report…", expanded=True) as status:
                 try:
                     file_bytes = uploaded_file.read()
-                    text = extract_text_from_pdf(file_bytes)
-                    if len(text.strip()) < 200:
-                        st.error("Could not extract enough text. Is it a scanned document?")
-                        st.stop()
-                    st.write("✅ PDF extracted successfully")
+                    st.write("📄 Uploading PDF…")
 
-                    # ── Step 2: stream Claude analysis ──
-                    status.update(label="Analysing with Claude…")
-                    st.write("🤖 Sending to Claude AI…")
-
-                    result = analyze_report(text, language=lang)
+                    analyze_resp = requests.post(
+                        f"{api_base}/api/analyze?language={lang}",
+                        files={"file": (uploaded_file.name, file_bytes,
+                                        "application/pdf")},
+                        headers=headers,
+                    )
+                    analyze_resp.raise_for_status()
+                    result = analyze_resp.json()
 
                     st.write("✅ Analysis complete")
                     status.update(label="Done!", state="complete")
+                    st.session_state["result"] = result
+                    st.session_state["filename"] = uploaded_file.name
 
-                except ValueError as e:
-                    status.update(label="Analysis failed", state="error")
-                    st.error(f"**Claude returned an unexpected response.**\n\n{e}")
-                    st.stop()
+                except requests.HTTPError as e:
+                    status.update(label="Failed", state="error")
+                    detail = e.response.json().get("detail", e.response.text)
+                    st.error(f"⚠️ {detail}")
                 except Exception as e:
-                    status.update(label="Analysis failed", state="error")
-                    st.error(f"**Unexpected error:** {e}")
-                    st.stop()
+                    status.update(label="Unexpected error", state="error")
+                    st.error(f"⚠️ {e}")
 
-            # ── Persist to session state ──
-            st.session_state["result"] = result
-            st.session_state["filename"] = uploaded_file.name
-
-    # ── Results (persisted across reruns) ──
+    # Results (persisted across reruns)
     if "result" in st.session_state:
         result = st.session_state["result"]
         filename = st.session_state.get("filename", "report.pdf")
@@ -91,14 +105,16 @@ with tab_analyse:
 
         st.divider()
         c.summary_section(result.get("resume", "—"))
-        c.tone_section(result.get("ton", "neutre"), result.get("raison_ton", ""))
+        c.tone_section(result.get("ton", "neutre"),
+                       result.get("raison_ton", ""))
         if result.get("kpis"):
             c.kpis_section(result["kpis"])
         c.themes_section(result.get("themes", []))
-        c.risks_opportunities_section(result.get("risques", []), result.get("opportunites", []))
+        c.risks_opportunities_section(
+            result.get("risques", []), result.get("opportunites", [])
+        )
         c.export_section(result, filename)
 
-# ── Compare tab ──────────────────────────────────────────────────────────────
+# Compare tab
 with tab_compare:
-    from app._pages.compare import render as render_compare
     render_compare()

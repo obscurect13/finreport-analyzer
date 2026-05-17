@@ -7,7 +7,7 @@ def test_cache_roundtrip(tmp_path, monkeypatch):
     # Use temporary cache directory
     temp_dir = tmp_path / "cache"
     temp_dir.mkdir()
-    monkeypatch.setattr('src.cache.CACHE_DIR', str(temp_dir))
+    monkeypatch.setattr("src.cache.CACHE_DIR", str(temp_dir))
 
     text = "sample report"
     lang = "fr"

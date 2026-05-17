@@ -14,6 +14,12 @@ services:
       - "8000:8000"
     <<: *env
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
 
   app:
     build: .
@@ -21,5 +27,12 @@ services:
     command: streamlit run app/streamlit_app.py --server.port=8501 --server.address=0.0.0.0
     ports:
       - "8501:8501"
-    <<: *env
+    environment:
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      API_KEY: ${API_KEY:-}
+      RATE_LIMIT_PER_MINUTE: ${RATE_LIMIT_PER_MINUTE:-10}
+      API_BASE_URL: http://api:8000
+    depends_on:
+      api:
+        condition: service_healthy
     restart: unless-stopped

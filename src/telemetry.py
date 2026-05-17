@@ -1,6 +1,5 @@
 import logging
 import os
-from datetime import datetime
 
 # Ensure logs directory exists
 log_dir = os.path.join(os.path.dirname(__file__), "..", "logs")
@@ -13,11 +12,12 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(message)s",
     handlers=[
         logging.FileHandler(log_file, encoding="utf-8"),
-        logging.StreamHandler()
-    ]
+        logging.StreamHandler(),
+    ],
 )
 
 logger = logging.getLogger("telemetry")
+
 
 def log_event(event: str, **kwargs):
     """Log a telemetry event with optional key/value pairs."""

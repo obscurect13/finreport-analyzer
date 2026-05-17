@@ -3,8 +3,8 @@ import pytest
 from unittest.mock import MagicMock, patch
 from src.analyzer import analyze_report, _parse_response
 
+# ── _parse_response ──────────────────────────────────────────────────────────
 
-# ── _parse_response ───────────────────────────────────────────────────────────
 
 def test_parse_response_valid():
     raw = json.dumps({"ton": "neutre", "resume": "ok"})
@@ -13,7 +13,7 @@ def test_parse_response_valid():
 
 
 def test_parse_response_strips_markdown_fences():
-    raw = "```json\n{\"ton\": \"optimiste\"}\n```"
+    raw = '```json\n{"ton": "optimiste"}\n```'
     result = _parse_response(raw)
     assert result["ton"] == "optimiste"
 
@@ -49,7 +49,9 @@ def _make_stream_mock(text: str):
 def test_analyze_report_returns_dict(mock_anthropic, tmp_path, monkeypatch):
     monkeypatch.setattr("src.cache.CACHE_DIR", str(tmp_path))
     client = MagicMock()
-    client.messages.stream.return_value = _make_stream_mock(json.dumps(DUMMY_RESULT))
+    client.messages.stream.return_value = _make_stream_mock(
+        json.dumps(DUMMY_RESULT)
+    )
     mock_anthropic.return_value = client
 
     result = analyze_report("some report text", language="en")
@@ -61,7 +63,9 @@ def test_analyze_report_returns_dict(mock_anthropic, tmp_path, monkeypatch):
 def test_analyze_report_uses_cache(mock_anthropic, tmp_path, monkeypatch):
     monkeypatch.setattr("src.cache.CACHE_DIR", str(tmp_path))
     client = MagicMock()
-    client.messages.stream.return_value = _make_stream_mock(json.dumps(DUMMY_RESULT))
+    client.messages.stream.return_value = _make_stream_mock(
+        json.dumps(DUMMY_RESULT)
+    )
     mock_anthropic.return_value = client
 
     # First call hits API
@@ -74,7 +78,9 @@ def test_analyze_report_uses_cache(mock_anthropic, tmp_path, monkeypatch):
 
 
 @patch("src.analyzer.anthropic.Anthropic")
-def test_analyze_report_invalid_json_raises(mock_anthropic, tmp_path, monkeypatch):
+def test_analyze_report_invalid_json_raises(
+    mock_anthropic, tmp_path, monkeypatch
+):
     monkeypatch.setattr("src.cache.CACHE_DIR", str(tmp_path))
     client = MagicMock()
     client.messages.stream.return_value = _make_stream_mock("this is not json")
