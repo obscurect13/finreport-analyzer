@@ -10,9 +10,13 @@ from src.telemetry import log_event
 
 router = APIRouter(prefix="/api", tags=["analysis"])
 
+
+
 # ── Auth ──────────────────────────────────────────────────────────────────────
 API_KEY = os.getenv("API_KEY")
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+
+
 
 def require_api_key(key: str = Depends(api_key_header)):
     if API_KEY and key != API_KEY:
